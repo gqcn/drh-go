@@ -1,5 +1,5 @@
 <div align=center>
-<img src="https://github.com/johng-cn/drh-go/blob/master/drh.png" height="600"/>
+<img src="https://gitee.com/johng/drh-go/blob/master/drh.png" height="600"/>
 </div>
 
 

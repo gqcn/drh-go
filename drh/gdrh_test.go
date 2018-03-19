@@ -6,7 +6,7 @@
 
 // go test *.go -bench=".*"
 
-package gdrh_test
+package drh
 
 import (
     "testing"

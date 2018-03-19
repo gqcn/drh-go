@@ -5,7 +5,7 @@
 // You can obtain one at https://gitee.com/johng/gf.
 
 // DRH算法实现的Map.
-package gdrh
+package drh
 
 // DRH算法操作对象
 type Map struct {

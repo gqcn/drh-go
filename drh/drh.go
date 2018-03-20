@@ -1,9 +1,3 @@
-// Copyright 2017 gf Author(https://gitee.com/johng/gf). All Rights Reserved.
-//
-// This Source Code Form is subject to the terms of the MIT License.
-// If a copy of the MIT was not distributed with this file,
-// You can obtain one at https://gitee.com/johng/gf.
-
 // DRH算法实现的Map.
 package drh
 
@@ -18,8 +12,8 @@ type Map struct {
 type drhTable struct {
     m      *Map         // 所属Map对象
     p      *drhPart     // 关联的分区对象(哪个分区指向该哈希表)
-    deep   int          // 表深度(其实没什么意义，打印层级时候可以用得上)
     size   int          // 表分区(除根节点外，必须为奇数)
+    fsize  int          // 当前有数据的分区数(当fsize=0时表示当前哈希表可删除)
     parts  []*drhPart   // 分区数组
 }
 
@@ -44,7 +38,6 @@ func New(size, degree int) *Map {
     }
     m.root = &drhTable {
         m     : m,
-        deep  : 0,
         size  : size,
         parts : make([]*drhPart, size),
     }
@@ -119,6 +112,12 @@ func (t *drhTable) set(key int, value interface{}) {
         } else {
             // 首先进行进行数据项插入
             p.save(&drhItem{key : key, value : value }, index, cmp)
+            if cmp != 0 {
+                // 递增分区对应哈希表的有数据分区数记录
+                if len(p.items) == 1 {
+                    t.fsize++
+                }
+            }
             // 接着再判断是否需要进行DRH算法处理
             p.checkAndDoDeepReHash()
         }
@@ -136,10 +135,26 @@ func (t *drhTable) remove(key int) {
         index, cmp := p.search(key)
         if cmp == 0 {
             p.remove(index)
-            // 如果分区元素
+            // 如果分区元素已经被删空，那么检查当前哈希表是否可删除
             if len(p.items) == 0 {
-                p.table = nil
+                // 递减分区对应哈希表的有数据分区数记录
+                t.fsize--
+                if t.fsize == 0 {
+                    t.destroy()
+                }
             }
+        }
+    }
+}
+
+// 当哈希表的所有分区数据都被删空时，该哈希表需要被销毁，并回溯递归处理
+func (t *drhTable) destroy() {
+    // 如果存在父级分区，那么需要进行回溯处理(root哈希表不存在父级分区)
+    if t.p != nil {
+        t.p.table = nil
+        t.p.t.fsize--
+        if t.p.t.fsize == 0 {
+            t.destroy()
         }
     }
 }
@@ -183,8 +198,8 @@ func (p *drhPart) checkAndDoDeepReHash() {
     table := &drhTable {
         m     : p.t.m,
         p     : p,
-        deep  : p.t.deep + 1,
         size  : size,
+        fsize : len(parts),
         parts : make([]*drhPart, size),
     }
     for k, v := range parts {
@@ -221,6 +236,10 @@ func (p *drhPart) save(item *drhItem, index int, cmp int) {
 // 删除数组元素
 func (p *drhPart) remove(index int) {
     p.items = append(p.items[ : index], p.items[index + 1 : ]...)
+    // 递减分区对应哈希表的有数据分区数记录
+    if len(p.items) == 0 {
+        p.t.fsize--
+    }
 }
 
 // 在当前分区上进行二分检索
